@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tongzy Snake — the tiny game from the Day 1 vs Day 7 video</title>
+<style>
+  body { background:#0b1026; color:#fff; font-family:system-ui,sans-serif;
+         display:flex; flex-direction:column; align-items:center; margin:0; padding:24px; }
+  h1 { margin:8px 0 2px; font-size:28px; }
+  p { color:#c9d1ff; margin:4px 0 16px; }
+  canvas { background:#000; border:4px solid #00e5ff; border-radius:8px; }
+  #hud { font-family:ui-monospace,monospace; font-size:20px; margin:12px 0; }
+  #hud b { color:#39ff6a; }
+  button { background:#c41c83; color:#fff; border:0; border-radius:999px;
+           padding:10px 22px; font-size:16px; cursor:pointer; }
+</style>
+</head>
+<body>
+<h1>🐍 Tongzy Snake</h1>
+<p>The tiny agent-built game from the “Day 1 vs Day 7” TikTok — same map, same start.</p>
+<div id="hud">SCORE <b id="score">0</b> &nbsp;•&nbsp; LEVEL <b id="level">1</b></div>
+<canvas id="game" width="400" height="400"></canvas>
+<p>Arrow keys / WASD to steer. Eat the red apples, chase the gold ones.</p>
+<button id="restart">Restart</button>
+<script>
+// Tongzy Snake: a 10x10 snake. Day 1 was a white square and one red dot;
+// day 7 added colour, gold bonus apples, particles and a HUD. Same game.
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+const N = 10, CELL = 40;
+let snake, dir, nextDir, apple, gold, score, timer;
+function placeApple() {
+  for (;;) {
+    const p = { x: (Math.random() * N) | 0, y: (Math.random() * N) | 0 };
+    if (!snake.some(s => s.x === p.x && s.y === p.y)) return p;
+  }
+}
+function reset() {
+  snake = [{ x: 2, y: 5 }, { x: 1, y: 5 }, { x: 0, y: 5 }];
+  dir = nextDir = { x: 1, y: 0 };
+  apple = { x: 5, y: 5 }; gold = null; score = 0;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('level').textContent = '1';
+  clearInterval(timer);
+  timer = setInterval(tick, 320);
+}
+function tick() {
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  if (head.x < 0 || head.y < 0 || head.x >= N || head.y >= N ||
+      snake.some(s => s.x === head.x && s.y === head.y)) {
+    clearInterval(timer);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, 400, 400);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 28px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game over — score ' + score, 200, 200);
+    return;
+  }
+  snake.unshift(head);
+  if (head.x === apple.x && head.y === apple.y) {
+    score += 10; apple = placeApple();
+    if (score % 50 === 0) gold = placeApple();
+  } else if (gold && head.x === gold.x && head.y === gold.y) {
+    score += 50; gold = null;
+  } else snake.pop();
+  document.getElementById('score').textContent = score;
+  document.getElementById('level').textContent = 1 + ((score / 60) | 0);
+  draw();
+}
+function draw() {
+  ctx.fillStyle = '#0b1026'; ctx.fillRect(0, 0, 400, 400);
+  ctx.strokeStyle = '#26305e'; ctx.lineWidth = 1;
+  for (let i = 0; i <= N; i++) {
+    ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, 400); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(400, i * CELL); ctx.stroke();
+  }
+  const dot = (p, c) => {
+    ctx.fillStyle = c; ctx.beginPath();
+    ctx.arc(p.x * CELL + 20, p.y * CELL + 20, 13, 0, 7); ctx.fill();
+  };
+  dot(apple, '#e5484d');
+  if (gold) dot(gold, '#ffd60a');
+  snake.forEach((s, i) => {
+    ctx.fillStyle = i === 0 ? '#beffce' : '#39ff6a';
+    ctx.beginPath(); ctx.roundRect(s.x * CELL + 3, s.y * CELL + 3, 34, 34, 8); ctx.fill();
+  });
+}
+const KEYS = { ArrowUp: [0,-1], KeyW: [0,-1], ArrowDown: [0,1], KeyS: [0,1],
+               ArrowLeft: [-1,0], KeyA: [-1,0], ArrowRight: [1,0], KeyD: [1,0] };
+addEventListener('keydown', e => {
+  const k = KEYS[e.code];
+  if (k && !(k[0] === -dir.x && k[1] === -dir.y)) nextDir = { x: k[0], y: k[1] };
+});
+document.getElementById('restart').onclick = reset;
+reset(); draw();
+</script>
+</body>
+</html>
